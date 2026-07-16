@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIP会员管理系统</title>
+  <link rel="stylesheet" href="lib/element-plus.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <div class="app-wrapper" v-if="user.userId">
+      <!-- ========== 侧边栏 ========== -->
+      <aside class="sidebar">
+        <div class="sidebar-logo">
+          <h3>VIP管理系统</h3>
+        </div>
+        <nav class="sidebar-menu">
+          <div class="menu-item" :class="{ active: currentMenu === 'member' }" @click="switchMenu('member')">
+            <span class="icon">👤</span> 会员管理
+          </div>
+          <div class="menu-item" :class="{ active: currentMenu === 'goods' }" @click="switchMenu('goods')">
+            <span class="icon">📦</span> 商品管理
+          </div>
+          <div class="menu-item" :class="{ active: currentMenu === 'staff' }" @click="switchMenu('staff')">
+            <span class="icon">👥</span> 员工管理
+          </div>
+          <div class="menu-item" :class="{ active: currentMenu === 'supplier' }" @click="switchMenu('supplier')">
+            <span class="icon">🏭</span> 供应商管理
+          </div>
+        </nav>
+      </aside>
+
+      <!-- ========== 主体区域 ========== -->
+      <div class="main-area">
+        <!-- 顶部栏 -->
+        <header class="header">
+          <div class="header-left">
+            <div class="breadcrumb">
+              <span>首页</span>
+              <span class="separator">/</span>
+              <span class="current">{{ menuTitle }}</span>
+            </div>
+          </div>
+          <div class="header-right">
+            <span class="username">{{ user.name }}（{{ user.username }}）</span>
+            <el-button plain size="small" @click="openPwdDialog">修改密码</el-button>
+            <el-button plain size="small" type="danger" @click="handleLogout">退出登录</el-button>
+          </div>
+        </header>
+
+        <!-- 内容区 -->
+        <section class="content">
+          <!-- ===== 会员管理 ===== -->
+          <div class="content-card" v-show="currentMenu === 'member'">
+            <div class="search-bar">
+              <el-input v-model="memberSearch.name" placeholder="会员姓名" clearable @keyup.enter="handleMemberSearch" />
+              <el-input v-model="memberSearch.cardNum" placeholder="卡号" clearable @keyup.enter="handleMemberSearch" />
+              <el-select v-model="memberSearch.payType" placeholder="支付类型" clearable @keyup.enter="handleMemberSearch">
+                <el-option label="现金" value="1" />
+                <el-option label="微信" value="2" />
+                <el-option label="支付宝" value="3" />
+                <el-option label="银行卡" value="4" />
+              </el-select>
+              <div class="search-actions">
+                <el-button type="primary" @click="handleMemberSearch">搜索</el-button>
+                <el-button @click="handleMemberReset">重置</el-button>
+              </div>
+            </div>
+            <div class="table-toolbar">
+              <el-button type="primary" @click="openMemberAdd">新增会员</el-button>
+            </div>
+            <el-table :data="memberTable" border stripe v-loading="memberLoading" style="width:100%">
+              <template #empty>
+                <el-empty description="暂无会员数据" :image-size="80" />
+              </template>
+              <el-table-column label="卡号" width="120">
+                <template #default="{ row }">{{ row.cardNum }}</template>
+              </el-table-column>
+              <el-table-column label="姓名" width="100">
+                <template #default="{ row }">{{ row.name }}</template>
+              </el-table-column>
+              <el-table-column label="生日" width="120">
+                <template #default="{ row }">{{ formatDate(row.birthday) }}</template>
+              </el-table-column>
+              <el-table-column label="手机号" width="130">
+                <template #default="{ row }">{{ row.phone }}</template>
+              </el-table-column>
+              <el-table-column label="积分" width="80" align="right">
+                <template #default="{ row }">{{ row.integral != null ? row.integral : '' }}</template>
+              </el-table-column>
+              <el-table-column label="余额" width="110" align="right">
+                <template #default="{ row }">
+                  <span class="amount-cell">{{ row.money != null ? Number(row.money).toFixed(2) : '' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="支付类型" width="90">
+                <template #default="{ row }">{{ payTypeLabel(row.payType) }}</template>
+              </el-table-column>
+              <el-table-column label="地址" min-width="150" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.address }}</template>
+              </el-table-column>
+              <el-table-column label="操作" width="140" fixed="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" size="small" @click="openMemberEdit(row)">编辑</el-button>
+                  <el-button link type="danger" size="small" @click="handleMemberDelete(row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div class="pagination-container">
+              <el-pagination
+                v-model:current-page="memberPage.current"
+                v-model:page-size="memberPage.size"
+                :total="memberPage.total"
+                :page-sizes="[5,10,20,50]"
+                layout="total,sizes,prev,pager,next,jumper"
+                @size-change="() => { memberPage.current = 1; loadMemberList(); }"
+                @current-change="loadMemberList"
+              />
+            </div>
+          </div>
+
+          <!-- ===== 商品管理 ===== -->
+          <div class="content-card" v-show="currentMenu === 'goods'">
+            <div class="search-bar">
+              <el-input v-model="goodsSearch.name" placeholder="商品名称" clearable @keyup.enter="handleGoodsSearch" />
+              <el-input v-model="goodsSearch.code" placeholder="商品编码" clearable @keyup.enter="handleGoodsSearch" />
+              <div class="search-actions">
+                <el-button type="primary" @click="handleGoodsSearch">搜索</el-button>
+                <el-button @click="handleGoodsReset">重置</el-button>
+              </div>
+            </div>
+            <div class="table-toolbar">
+              <el-button type="primary" @click="openGoodsAdd">新增商品</el-button>
+            </div>
+            <el-table :data="goodsTable" border stripe v-loading="goodsLoading" style="width:100%">
+              <template #empty>
+                <el-empty description="暂无商品数据" :image-size="80" />
+              </template>
+              <el-table-column label="商品编码" width="120">
+                <template #default="{ row }">{{ row.code }}</template>
+              </el-table-column>
+              <el-table-column label="名称" width="140" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.name }}</template>
+              </el-table-column>
+              <el-table-column label="规格" width="120">
+                <template #default="{ row }">{{ row.spec }}</template>
+              </el-table-column>
+              <el-table-column label="零售价" width="100" align="right">
+                <template #default="{ row }">
+                  <span class="amount-cell">{{ row.retailPrice != null ? Number(row.retailPrice).toFixed(2) : '' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="进货价" width="100" align="right">
+                <template #default="{ row }">
+                  <span class="amount-cell">{{ row.purchasePrice != null ? Number(row.purchasePrice).toFixed(2) : '' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="库存" width="80" align="right">
+                <template #default="{ row }">{{ row.storageNum != null ? row.storageNum : '' }}</template>
+              </el-table-column>
+              <el-table-column label="供应商" width="140" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.supplierName }}</template>
+              </el-table-column>
+              <el-table-column label="操作" width="140" fixed="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" size="small" @click="openGoodsEdit(row)">编辑</el-button>
+                  <el-button link type="danger" size="small" @click="handleGoodsDelete(row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div class="pagination-container">
+              <el-pagination
+                v-model:current-page="goodsPage.current"
+                v-model:page-size="goodsPage.size"
+                :total="goodsPage.total"
+                :page-sizes="[5,10,20,50]"
+                layout="total,sizes,prev,pager,next,jumper"
+                @size-change="() => { goodsPage.current = 1; loadGoodsList(); }"
+                @current-change="loadGoodsList"
+              />
+            </div>
+          </div>
+
+          <!-- ===== 员工管理 ===== -->
+          <div class="content-card" v-show="currentMenu === 'staff'">
+            <div class="search-bar">
+              <el-input v-model="staffSearch.name" placeholder="姓名" clearable @keyup.enter="handleStaffSearch" />
+              <el-input v-model="staffSearch.username" placeholder="账号" clearable @keyup.enter="handleStaffSearch" />
+              <div class="search-actions">
+                <el-button type="primary" @click="handleStaffSearch">搜索</el-button>
+                <el-button @click="handleStaffReset">重置</el-button>
+              </div>
+            </div>
+            <div class="table-toolbar">
+              <el-button type="primary" @click="openStaffAdd">新增员工</el-button>
+            </div>
+            <el-table :data="staffTable" border stripe v-loading="staffLoading" style="width:100%">
+              <template #empty>
+                <el-empty description="暂无员工数据" :image-size="80" />
+              </template>
+              <el-table-column label="账号" width="120">
+                <template #default="{ row }">{{ row.username }}</template>
+              </el-table-column>
+              <el-table-column label="姓名" width="100">
+                <template #default="{ row }">{{ row.name }}</template>
+              </el-table-column>
+              <el-table-column label="年龄" width="80" align="right">
+                <template #default="{ row }">{{ row.age != null ? row.age : '' }}</template>
+              </el-table-column>
+              <el-table-column label="电话" width="130">
+                <template #default="{ row }">{{ row.mobile }}</template>
+              </el-table-column>
+              <el-table-column label="薪酬" width="110" align="right">
+                <template #default="{ row }">
+                  <span class="amount-cell">{{ row.salary != null ? Number(row.salary).toFixed(2) : '' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="入职时间" width="120">
+                <template #default="{ row }">{{ formatDate(row.entryDate) }}</template>
+              </el-table-column>
+              <el-table-column label="操作" width="140" fixed="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" size="small" @click="openStaffEdit(row)">编辑</el-button>
+                  <el-button link type="danger" size="small" @click="handleStaffDelete(row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div class="pagination-container">
+              <el-pagination
+                v-model:current-page="staffPage.current"
+                v-model:page-size="staffPage.size"
+                :total="staffPage.total"
+                :page-sizes="[5,10,20,50]"
+                layout="total,sizes,prev,pager,next,jumper"
+                @size-change="() => { staffPage.current = 1; loadStaffList(); }"
+                @current-change="loadStaffList"
+              />
+            </div>
+          </div>
+
+          <!-- ===== 供应商管理 ===== -->
+          <div class="content-card" v-show="currentMenu === 'supplier'">
+            <div class="search-bar">
+              <el-input v-model="supplierSearch.name" placeholder="供应商名称" clearable @keyup.enter="handleSupplierSearch" />
+              <el-input v-model="supplierSearch.linkman" placeholder="联系人" clearable @keyup.enter="handleSupplierSearch" />
+              <div class="search-actions">
+                <el-button type="primary" @click="handleSupplierSearch">搜索</el-button>
+                <el-button @click="handleSupplierReset">重置</el-button>
+              </div>
+            </div>
+            <div class="table-toolbar">
+              <el-button type="primary" @click="openSupplierAdd">新增供应商</el-button>
+            </div>
+            <el-table :data="supplierTable" border stripe v-loading="supplierLoading" style="width:100%">
+              <template #empty>
+                <el-empty description="暂无供应商数据" :image-size="80" />
+              </template>
+              <el-table-column label="名称" width="160" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.name }}</template>
+              </el-table-column>
+              <el-table-column label="联系人" width="120">
+                <template #default="{ row }">{{ row.linkman }}</template>
+              </el-table-column>
+              <el-table-column label="电话" width="130">
+                <template #default="{ row }">{{ row.mobile }}</template>
+              </el-table-column>
+              <el-table-column label="备注" min-width="200" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.remark }}</template>
+              </el-table-column>
+              <el-table-column label="操作" width="140" fixed="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" size="small" @click="openSupplierEdit(row)">编辑</el-button>
+                  <el-button link type="danger" size="small" @click="handleSupplierDelete(row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div class="pagination-container">
+              <el-pagination
+                v-model:current-page="supplierPage.current"
+                v-model:page-size="supplierPage.size"
+                :total="supplierPage.total"
+                :page-sizes="[5,10,20,50]"
+                layout="total,sizes,prev,pager,next,jumper"
+                @size-change="() => { supplierPage.current = 1; loadSupplierList(); }"
+                @current-change="loadSupplierList"
+              />
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ========== 修改密码弹窗 ========== -->
+    <el-dialog v-model="pwdDialogVisible" title="修改密码" width="480px" :close-on-click-modal="false" @closed="resetPwdForm">
+      <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="90px">
+        <el-form-item label="原密码" prop="oldPassword">
+          <el-input v-model="pwdForm.oldPassword" type="password" show-password placeholder="请输入原密码" />
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="请输入新密码" />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="pwdForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="pwdDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="pwdLoading" @click="handleChangePassword">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ========== 会员弹窗 ========== -->
+    <el-dialog v-model="memberDialogVisible" :title="memberDialogTitle" width="520px" :close-on-click-modal="false" @closed="resetMemberForm">
+      <el-form ref="memberFormRef" :model="memberForm" :rules="memberRules" label-width="80px">
+        <el-form-item label="卡号" prop="cardNum">
+          <el-input v-model="memberForm.cardNum" placeholder="请输入卡号" maxlength="32" />
+        </el-form-item>
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="memberForm.name" placeholder="请输入姓名" maxlength="20" />
+        </el-form-item>
+        <el-form-item label="生日">
+          <el-date-picker v-model="memberForm.birthday" type="date" value-format="YYYY-MM-DD" placeholder="选择生日" style="width:100%" :disabled-date="disabledFutureDate" />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="memberForm.phone" placeholder="请输入手机号" maxlength="11" />
+        </el-form-item>
+        <el-form-item label="积分" prop="integral">
+          <el-input-number v-model="memberForm.integral" :min="0" :precision="0" :controls="true" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="余额">
+          <el-input-number v-model="memberForm.money" :min="0" :precision="2" :controls="true" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="支付类型" prop="payType">
+          <el-select v-model="memberForm.payType" placeholder="请选择支付类型" style="width:100%">
+            <el-option label="现金" value="1" />
+            <el-option label="微信" value="2" />
+            <el-option label="支付宝" value="3" />
+            <el-option label="银行卡" value="4" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="地址">
+          <el-input v-model="memberForm.address" placeholder="请输入地址" maxlength="100" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="memberDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="memberSaving" @click="handleSaveMember">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ========== 商品弹窗 ========== -->
+    <el-dialog v-model="goodsDialogVisible" :title="goodsDialogTitle" width="520px" :close-on-click-modal="false" @closed="resetGoodsForm" @opened="loadSupplierOptions">
+      <el-form ref="goodsFormRef" :model="goodsForm" :rules="goodsRules" label-width="80px">
+        <el-form-item label="商品编码" prop="code">
+          <el-input v-model="goodsForm.code" placeholder="请输入商品编码" maxlength="32" />
+        </el-form-item>
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="goodsForm.name" placeholder="请输入商品名称" maxlength="50" />
+        </el-form-item>
+        <el-form-item label="规格">
+          <el-input v-model="goodsForm.spec" placeholder="请输入规格" maxlength="50" />
+        </el-form-item>
+        <el-form-item label="零售价" prop="retailPrice">
+          <el-input-number v-model="goodsForm.retailPrice" :min="0" :precision="2" :controls="true" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="进货价">
+          <el-input-number v-model="goodsForm.purchasePrice" :min="0" :precision="2" :controls="true" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="库存" prop="storageNum">
+          <el-input-number v-model="goodsForm.storageNum" :min="0" :precision="0" :controls="true" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="供应商" prop="supplierId">
+          <el-select v-model="goodsForm.supplierId" placeholder="请选择供应商" style="width:100%">
+            <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.id" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="goodsDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="goodsSaving" @click="handleSaveGoods">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ========== 员工弹窗 ========== -->
+    <el-dialog v-model="staffDialogVisible" :title="staffDialogTitle" width="520px" :close-on-click-modal="false" @closed="resetStaffForm">
+      <el-form ref="staffFormRef" :model="staffForm" :rules="staffRules" label-width="80px">
+        <el-form-item label="账号" prop="username">
+          <el-input v-model="staffForm.username" placeholder="请输入账号" :disabled="!isStaffAdd" maxlength="20" />
+        </el-form-item>
+        <el-form-item label="密码" :prop="isStaffAdd ? 'password' : ''">
+          <el-input v-model="staffForm.password" type="password" show-password :placeholder="isStaffAdd ? '请输入密码' : '留空则不修改密码'" maxlength="20" />
+        </el-form-item>
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="staffForm.name" placeholder="请输入姓名" maxlength="20" />
+        </el-form-item>
+        <el-form-item label="年龄" prop="age">
+          <el-input-number v-model="staffForm.age" :min="0" :max="150" :precision="0" :controls="true" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="电话">
+          <el-input v-model="staffForm.mobile" placeholder="请输入电话" maxlength="11" />
+        </el-form-item>
+        <el-form-item label="薪酬">
+          <el-input-number v-model="staffForm.salary" :min="0" :precision="2" :controls="true" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="入职时间">
+          <el-date-picker v-model="staffForm.entryDate" type="date" value-format="YYYY-MM-DD" placeholder="选择入职时间" style="width:100%" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="staffDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="staffSaving" @click="handleSaveStaff">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ========== 供应商弹窗 ========== -->
+    <el-dialog v-model="supplierDialogVisible" :title="supplierDialogTitle" width="520px" :close-on-click-modal="false" @closed="resetSupplierForm">
+      <el-form ref="supplierFormRef" :model="supplierForm" :rules="supplierRules" label-width="80px">
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="supplierForm.name" placeholder="请输入供应商名称" maxlength="50" />
+        </el-form-item>
+        <el-form-item label="联系人" prop="linkman">
+          <el-input v-model="supplierForm.linkman" placeholder="请输入联系人" maxlength="20" />
+        </el-form-item>
+        <el-form-item label="电话" prop="mobile">
+          <el-input v-model="supplierForm.mobile" placeholder="请输入电话" maxlength="11" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="supplierForm.remark" type="textarea" :rows="3" placeholder="请输入备注" maxlength="200" show-word-limit />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="supplierDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="supplierSaving" @click="handleSaveSupplier">确定</el-button>
+      </template>
+    </el-dialog>
+  </div>
+
+  <!-- Vue 3 -->
+  <script src="lib/vue.global.prod.js"></script>
+  <!-- Element Plus -->
+  <script src="lib/element-plus.js"></script>
+  <!-- Axios -->
+  <script src="lib/axios.min.js"></script>
+  <!-- API 封装 -->
+  <script src="js/api.js"></script>
+
+  <script>
+    const { createApp, ref, reactive, computed, nextTick, onMounted, watch } = Vue;
+    // ========== 轻量级消息提示（替代ElMessage/ElMessageBox） ==========
+    function showToast(msg, type) { type = type || "success";
+      var el = document.getElementById('_toast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = '_toast';
+        el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;padding:10px 24px;border-radius:6px;font-size:14px;color:#fff;pointer-events:none;transition:opacity 0.3s;opacity:0';
+        document.body.appendChild(el);
+      }
+      el.style.background = type === 'success' ? '#67C23A' : type === 'error' ? '#F56C6C' : '#409EFF';
+      el.textContent = msg;
+      el.style.opacity = '1';
+      clearTimeout(el._timer);
+      el._timer = setTimeout(function() { el.style.opacity = '0'; }, 2000);
+    }
+    function showConfirm(msg, title) {
+      return window.confirm((title || '提示') + '\n\n' + msg);
+    }
+
+    const app = createApp({
+      setup() {
+        // ==================== 用户信息 ====================
+        const user = JSON.parse(localStorage.getItem('vip_user') || '{}');
+        if (!user.userId) {
+          window.location.href = 'index.html';
+          return {};
+        }
+
+        // ==================== 导航 ====================
+        const currentMenu = ref('member');
+        const menuTitle = computed(() => {
+          const titles = { member: '会员管理', goods: '商品管理', staff: '员工管理', supplier: '供应商管理' };
+          return titles[currentMenu.value] || '';
+        });
+
+        function switchMenu(menu) {
+          currentMenu.value = menu;
+        }
+
+        // ==================== 工具函数 ====================
+        function formatDate(val) {
+          if (!val) return '';
+          const d = new Date(val);
+          if (isNaN(d.getTime())) return '';
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        }
+
+        function payTypeLabel(type) {
+          const map = { '1': '现金', '2': '微信', '3': '支付宝', '4': '银行卡' };
+          return map[type] || '';
+        }
+
+        function toDateStr(val) {
+          if (!val) return '';
+          const d = new Date(val);
+          if (isNaN(d.getTime())) return '';
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        }
+
+        function disabledFutureDate(time) {
+          return time.getTime() > Date.now();
+        }
+
+        // ==================== 修改密码 ====================
+        const pwdDialogVisible = ref(false);
+        const pwdLoading = ref(false);
+        const pwdFormRef = ref(null);
+        const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' });
+
+        const pwdRules = {
+          oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+          newPassword: [
+            { required: true, message: '请输入新密码', trigger: 'blur' },
+            { min: 3, message: '密码长度不能少于3位', trigger: 'blur' }
+          ],
+          confirmPassword: [
+            { required: true, message: '请再次输入新密码', trigger: 'blur' },
+            {
+              validator: (rule, value, callback) => {
+                if (value !== pwdForm.newPassword) {
+                  callback(new Error('两次输入的密码不一致'));
+                } else {
+                  callback();
+                }
+              },
+              trigger: 'blur'
+            }
+          ]
+        };
+
+        function openPwdDialog() {
+          pwdDialogVisible.value = true;
+          nextTick(() => { pwdFormRef.value && pwdFormRef.value.clearValidate(); });
+        }
+
+        function resetPwdForm() {
+          pwdForm.oldPassword = '';
+          pwdForm.newPassword = '';
+          pwdForm.confirmPassword = '';
+          nextTick(() => { pwdFormRef.value && pwdFormRef.value.clearValidate(); });
+        }
+
+        async function handleChangePassword() {
+          const valid = await pwdFormRef.value.validate().catch(() => false);
+          if (!valid) return;
+
+          pwdLoading.value = true;
+          try {
+            await checkPassword(user.userId, pwdForm.oldPassword);
+            await updatePassword(user.userId, pwdForm.newPassword);
+            showToast('密码修改成功，请重新登录', 'success');
+            pwdDialogVisible.value = false;
+            setTimeout(() => {
+              localStorage.removeItem('vip_user');
+              window.location.href = 'index.html';
+            }, 1000);
+          } catch (e) {
+            // 错误已在拦截器中提示
+          } finally {
+            pwdLoading.value = false;
+          }
+        }
+
+        function handleLogout() {
+          if (showConfirm('确定要退出登录吗？')) {
+            localStorage.removeItem('vip_user');
+            window.location.href = 'index.html';
+          }
+        }
+
+        // ==================== 会员管理 ====================
+        const memberSearch = reactive({ name: '', cardNum: '', payType: '' });
+        const memberTable = ref([]);
+        const memberLoading = ref(false);
+        const memberPage = reactive({ current: 1, size: 10, total: 0 });
+
+        const memberDialogVisible = ref(false);
+        const memberDialogTitle = ref('');
+        const memberSaving = ref(false);
+        const memberFormRef = ref(null);
+        const isMemberAdd = ref(true);
+        const memberForm = reactive({
+          id: null, cardNum: '', name: '', birthday: '', phone: '',
+          integral: 0, money: 0, payType: '', address: ''
+        });
+
+        const memberRules = {
+          cardNum: [{ required: true, message: '请输入卡号', trigger: 'blur' }],
+          name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+          phone: [
+            { required: true, message: '请输入手机号', trigger: 'blur' },
+            { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+          ],
+          payType: [{ required: true, message: '请选择支付类型', trigger: 'change' }],
+          integral: [{ required: true, message: '请输入积分', trigger: 'blur' }]
+        };
+
+        async function loadMemberList() {
+          memberLoading.value = true;
+          try {
+            const params = {};
+            if (memberSearch.name) params.name = memberSearch.name;
+            if (memberSearch.cardNum) params.cardNum = memberSearch.cardNum;
+            if (memberSearch.payType) params.payType = memberSearch.payType;
+            const res = await getMemberList(memberPage.current, memberPage.size, params);
+            const data = res.data || {};
+            memberTable.value = data.records || [];
+            memberPage.total = data.total || 0;
+            memberPage.current = data.current || 1;
+            memberPage.size = data.size || 10;
+          } catch (e) {
+            memberTable.value = [];
+          } finally {
+            memberLoading.value = false;
+          }
+        }
+
+        function handleMemberSearch() {
+          memberPage.current = 1;
+          loadMemberList();
+        }
+
+        function handleMemberReset() {
+          memberSearch.name = '';
+          memberSearch.cardNum = '';
+          memberSearch.payType = '';
+          memberPage.current = 1;
+          loadMemberList();
+        }
+
+        function getEmptyMemberForm() {
+          return {
+            id: null, cardNum: '', name: '', birthday: '', phone: '',
+            integral: 0, money: 0, payType: '', address: ''
+          };
+        }
+
+        function openMemberAdd() {
+          isMemberAdd.value = true;
+          memberDialogTitle.value = '新增会员';
+          Object.assign(memberForm, getEmptyMemberForm());
+          memberDialogVisible.value = true;
+          nextTick(() => { memberFormRef.value && memberFormRef.value.clearValidate(); });
+        }
+
+        function openMemberEdit(row) {
+          isMemberAdd.value = false;
+          memberDialogTitle.value = '编辑会员';
+          memberForm.id = row.id;
+          memberForm.cardNum = row.cardNum || '';
+          memberForm.name = row.name || '';
+          memberForm.birthday = toDateStr(row.birthday);
+          memberForm.phone = row.phone || '';
+          memberForm.integral = row.integral != null ? row.integral : 0;
+          memberForm.money = row.money != null ? Number(row.money) : 0;
+          memberForm.payType = row.payType || '';
+          memberForm.address = row.address || '';
+          memberDialogVisible.value = true;
+          nextTick(() => { memberFormRef.value && memberFormRef.value.clearValidate(); });
+        }
+
+        function resetMemberForm() {
+          Object.assign(memberForm, getEmptyMemberForm());
+          nextTick(() => { memberFormRef.value && memberFormRef.value.clearValidate(); });
+        }
+
+        async function handleSaveMember() {
+          const valid = await memberFormRef.value.validate().catch(() => false);
+          if (!valid) return;
+
+          memberSaving.value = true;
+          try {
+            const data = {
+              cardNum: memberForm.cardNum,
+              name: memberForm.name,
+              birthday: memberForm.birthday || null,
+              phone: memberForm.phone,
+              integral: memberForm.integral,
+              money: memberForm.money,
+              payType: memberForm.payType,
+              address: memberForm.address
+            };
+
+            if (isMemberAdd.value) {
+              await addMember(data);
+              showToast('新增成功');
+            } else {
+              await updateMember(memberForm.id, data);
+              showToast('修改成功');
+            }
+            memberDialogVisible.value = false;
+            loadMemberList();
+          } catch (e) {
+            // 错误已在拦截器提示
+          } finally {
+            memberSaving.value = false;
+          }
+        }
+
+
+        async function handleMemberDelete(row) {
+          if (!showConfirm('确定删除会员「' + row.name + '」吗？删除后不可恢复。')) return;
+          try {
+            await deleteMember(row.id);
+            showToast('删除成功');
+            if (memberTable.value.length === 1 && memberPage.current > 1) {
+              memberPage.current--;
+            }
+            loadMemberList();
+          } catch (e) {
+            // 错误已在拦截器提示
+          }
+        }
+
+        // ==================== 商品管理 ====================
+        const goodsSearch = reactive({ name: '', code: '' });
+        const goodsTable = ref([]);
+        const goodsLoading = ref(false);
+        const goodsPage = reactive({ current: 1, size: 10, total: 0 });
+
+        const goodsDialogVisible = ref(false);
+        const goodsDialogTitle = ref('');
+        const goodsSaving = ref(false);
+        const goodsFormRef = ref(null);
+        const isGoodsAdd = ref(true);
+        const goodsForm = reactive({
+          id: null, code: '', name: '', spec: '', retailPrice: 0,
+          purchasePrice: 0, storageNum: 0, supplierId: null
+        });
+        const supplierOptions = ref([]);
+
+        const goodsRules = {
+          code: [{ required: true, message: '请输入商品编码', trigger: 'blur' }],
+          name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
+          retailPrice: [{ required: true, message: '请输入零售价', trigger: 'blur' }],
+          storageNum: [{ required: true, message: '请输入库存', trigger: 'blur' }],
+          supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }]
+        };
+
+        async function loadSupplierOptions() {
+          if (supplierOptions.value.length > 0) return;
+          try {
+            supplierOptions.value = await getAllSuppliers();
+          } catch (e) {
+            supplierOptions.value = [];
+          }
+        }
+
+        async function loadGoodsList() {
+          goodsLoading.value = true;
+          try {
+            const params = {};
+            if (goodsSearch.name) params.name = goodsSearch.name;
+            if (goodsSearch.code) params.code = goodsSearch.code;
+            const res = await getGoodsList(goodsPage.current, goodsPage.size, params);
+            const data = res.data || {};
+            goodsTable.value = data.records || [];
+            goodsPage.total = data.total || 0;
+            goodsPage.current = data.current || 1;
+            goodsPage.size = data.size || 10;
+          } catch (e) {
+            goodsTable.value = [];
+          } finally {
+            goodsLoading.value = false;
+          }
+        }
+
+        function handleGoodsSearch() {
+          goodsPage.current = 1;
+          loadGoodsList();
+        }
+
+        function handleGoodsReset() {
+          goodsSearch.name = '';
+          goodsSearch.code = '';
+          goodsPage.current = 1;
+          loadGoodsList();
+        }
+
+        function getEmptyGoodsForm() {
+          return {
+            id: null, code: '', name: '', spec: '', retailPrice: 0,
+            purchasePrice: 0, storageNum: 0, supplierId: null
+          };
+        }
+
+        function openGoodsAdd() {
+          isGoodsAdd.value = true;
+          goodsDialogTitle.value = '新增商品';
+          Object.assign(goodsForm, getEmptyGoodsForm());
+          goodsDialogVisible.value = true;
+          nextTick(() => { goodsFormRef.value && goodsFormRef.value.clearValidate(); });
+        }
+
+        function openGoodsEdit(row) {
+          isGoodsAdd.value = false;
+          goodsDialogTitle.value = '编辑商品';
+          goodsForm.id = row.id;
+          goodsForm.code = row.code || '';
+          goodsForm.name = row.name || '';
+          goodsForm.spec = row.spec || '';
+          goodsForm.retailPrice = row.retailPrice != null ? Number(row.retailPrice) : 0;
+          goodsForm.purchasePrice = row.purchasePrice != null ? Number(row.purchasePrice) : 0;
+          goodsForm.storageNum = row.storageNum != null ? row.storageNum : 0;
+          goodsForm.supplierId = row.supplierId || null;
+          goodsDialogVisible.value = true;
+          nextTick(() => { goodsFormRef.value && goodsFormRef.value.clearValidate(); });
+        }
+
+        function resetGoodsForm() {
+          Object.assign(goodsForm, getEmptyGoodsForm());
+          nextTick(() => { goodsFormRef.value && goodsFormRef.value.clearValidate(); });
+        }
+
+        async function handleSaveGoods() {
+          const valid = await goodsFormRef.value.validate().catch(() => false);
+          if (!valid) return;
+
+          goodsSaving.value = true;
+          try {
+            const data = {
+              code: goodsForm.code,
+              name: goodsForm.name,
+              spec: goodsForm.spec,
+              retailPrice: goodsForm.retailPrice,
+              purchasePrice: goodsForm.purchasePrice,
+              storageNum: goodsForm.storageNum,
+              supplierId: goodsForm.supplierId
+            };
+
+            if (isGoodsAdd.value) {
+              await addGoods(data);
+              showToast('新增成功');
+            } else {
+              await updateGoods(goodsForm.id, data);
+              showToast('修改成功');
+            }
+            goodsDialogVisible.value = false;
+            loadGoodsList();
+          } catch (e) {
+            // 错误已在拦截器提示
+          } finally {
+            goodsSaving.value = false;
+          }
+        }
+
+        async function handleGoodsDelete(row) {
+          if (!showConfirm('确定删除商品「' + row.name + '」吗？删除后不可恢复。')) return;
+          try {
+            await deleteGoods(row.id);
+            showToast('删除成功');
+            if (goodsTable.value.length === 1 && goodsPage.current > 1) {
+              goodsPage.current--;
+            }
+            loadGoodsList();
+          } catch (e) {
+            // 错误已在拦截器提示
+          }
+        }
+
+        // ==================== 员工管理 ====================
+        const staffSearch = reactive({ name: '', username: '' });
+        const staffTable = ref([]);
+        const staffLoading = ref(false);
+        const staffPage = reactive({ current: 1, size: 10, total: 0 });
+
+        const staffDialogVisible = ref(false);
+        const staffDialogTitle = ref('');
+        const staffSaving = ref(false);
+        const staffFormRef = ref(null);
+        const isStaffAdd = ref(true);
+        const staffForm = reactive({
+          id: null, username: '', password: '', name: '',
+          age: null, mobile: '', salary: 0, entryDate: ''
+        });
+
+        const staffRules = {
+          username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+          password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+          name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+          age: [{ required: true, message: '请输入年龄', trigger: 'blur' }]
+        };
+
+        async function loadStaffList() {
+          staffLoading.value = true;
+          try {
+            const params = {};
+            if (staffSearch.name) params.name = staffSearch.name;
+            if (staffSearch.username) params.username = staffSearch.username;
+            const res = await getStaffList(staffPage.current, staffPage.size, params);
+            const data = res.data || {};
+            staffTable.value = data.records || [];
+            staffPage.total = data.total || 0;
+            staffPage.current = data.current || 1;
+            staffPage.size = data.size || 10;
+          } catch (e) {
+            staffTable.value = [];
+          } finally {
+            staffLoading.value = false;
+          }
+        }
+
+        function handleStaffSearch() {
+          staffPage.current = 1;
+          loadStaffList();
+        }
+
+        function handleStaffReset() {
+          staffSearch.name = '';
+          staffSearch.username = '';
+          staffPage.current = 1;
+          loadStaffList();
+        }
+
+        function getEmptyStaffForm() {
+          return {
+            id: null, username: '', password: '', name: '',
+            age: null, mobile: '', salary: 0, entryDate: ''
+          };
+        }
+
+        function openStaffAdd() {
+          isStaffAdd.value = true;
+          staffDialogTitle.value = '新增员工';
+          Object.assign(staffForm, getEmptyStaffForm());
+          staffDialogVisible.value = true;
+          nextTick(() => { staffFormRef.value && staffFormRef.value.clearValidate(); });
+        }
+
+        function openStaffEdit(row) {
+          isStaffAdd.value = false;
+          staffDialogTitle.value = '编辑员工';
+          staffForm.id = row.id;
+          staffForm.username = row.username || '';
+          staffForm.password = '';
+          staffForm.name = row.name || '';
+          staffForm.age = row.age != null ? row.age : null;
+          staffForm.mobile = row.mobile || '';
+          staffForm.salary = row.salary != null ? Number(row.salary) : 0;
+          staffForm.entryDate = toDateStr(row.entryDate);
+          staffDialogVisible.value = true;
+          nextTick(() => { staffFormRef.value && staffFormRef.value.clearValidate(); });
+        }
+
+        function resetStaffForm() {
+          Object.assign(staffForm, getEmptyStaffForm());
+          nextTick(() => { staffFormRef.value && staffFormRef.value.clearValidate(); });
+        }
+
+        async function handleSaveStaff() {
+          const valid = await staffFormRef.value.validate().catch(() => false);
+          if (!valid) return;
+
+          staffSaving.value = true;
+          try {
+            const data = {
+              username: staffForm.username,
+              name: staffForm.name,
+              age: staffForm.age,
+              mobile: staffForm.mobile,
+              salary: staffForm.salary,
+              entryDate: staffForm.entryDate || null
+            };
+
+            if (isStaffAdd.value) {
+              data.password = staffForm.password;
+              await addStaff(data);
+              showToast('新增成功');
+            } else {
+              if (staffForm.password) {
+                data.password = staffForm.password;
+              }
+              await updateStaff(staffForm.id, data);
+              showToast('修改成功');
+            }
+            staffDialogVisible.value = false;
+            loadStaffList();
+          } catch (e) {
+            // 错误已在拦截器提示
+          } finally {
+            staffSaving.value = false;
+          }
+        }
+
+        async function handleStaffDelete(row) {
+          if (!showConfirm('确定删除员工「' + row.name + '」吗？删除后不可恢复。')) return;
+          try {
+            await deleteStaff(row.id);
+            showToast('删除成功');
+            if (staffTable.value.length === 1 && staffPage.current > 1) {
+              staffPage.current--;
+            }
+            loadStaffList();
+          } catch (e) {
+            // 错误已在拦截器提示
+          }
+        }
+
+        // ==================== 供应商管理 ====================
+        const supplierSearch = reactive({ name: '', linkman: '' });
+        const supplierTable = ref([]);
+        const supplierLoading = ref(false);
+        const supplierPage = reactive({ current: 1, size: 10, total: 0 });
+
+        const supplierDialogVisible = ref(false);
+        const supplierDialogTitle = ref('');
+        const supplierSaving = ref(false);
+        const supplierFormRef = ref(null);
+        const isSupplierAdd = ref(true);
+        const supplierForm = reactive({
+          id: null, name: '', linkman: '', mobile: '', remark: ''
+        });
+
+        const supplierRules = {
+          name: [{ required: true, message: '请输入供应商名称', trigger: 'blur' }],
+          linkman: [{ required: true, message: '请输入联系人', trigger: 'blur' }],
+          mobile: [
+            { required: true, message: '请输入电话', trigger: 'blur' },
+            { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+          ]
+        };
+
+        async function loadSupplierList() {
+          supplierLoading.value = true;
+          try {
+            const params = {};
+            if (supplierSearch.name) params.name = supplierSearch.name;
+            if (supplierSearch.linkman) params.linkman = supplierSearch.linkman;
+            const res = await getSupplierList(supplierPage.current, supplierPage.size, params);
+            const data = res.data || {};
+            supplierTable.value = data.records || [];
+            supplierPage.total = data.total || 0;
+            supplierPage.current = data.current || 1;
+            supplierPage.size = data.size || 10;
+          } catch (e) {
+            supplierTable.value = [];
+          } finally {
+            supplierLoading.value = false;
+          }
+        }
+
+        function handleSupplierSearch() {
+          supplierPage.current = 1;
+          loadSupplierList();
+        }
+
+        function handleSupplierReset() {
+          supplierSearch.name = '';
+          supplierSearch.linkman = '';
+          supplierPage.current = 1;
+          loadSupplierList();
+        }
+
+        function getEmptySupplierForm() {
+          return { id: null, name: '', linkman: '', mobile: '', remark: '' };
+        }
+
+        function openSupplierAdd() {
+          isSupplierAdd.value = true;
+          supplierDialogTitle.value = '新增供应商';
+          Object.assign(supplierForm, getEmptySupplierForm());
+          supplierDialogVisible.value = true;
+          nextTick(() => { supplierFormRef.value && supplierFormRef.value.clearValidate(); });
+        }
+
+        function openSupplierEdit(row) {
+          isSupplierAdd.value = false;
+          supplierDialogTitle.value = '编辑供应商';
+          supplierForm.id = row.id;
+          supplierForm.name = row.name || '';
+          supplierForm.linkman = row.linkman || '';
+          supplierForm.mobile = row.mobile || '';
+          supplierForm.remark = row.remark || '';
+          supplierDialogVisible.value = true;
+          nextTick(() => { supplierFormRef.value && supplierFormRef.value.clearValidate(); });
+        }
+
+        function resetSupplierForm() {
+          Object.assign(supplierForm, getEmptySupplierForm());
+          nextTick(() => { supplierFormRef.value && supplierFormRef.value.clearValidate(); });
+        }
+
+        async function handleSaveSupplier() {
+          const valid = await supplierFormRef.value.validate().catch(() => false);
+          if (!valid) return;
+
+          supplierSaving.value = true;
+          try {
+            const data = {
+              name: supplierForm.name,
+              linkman: supplierForm.linkman,
+              mobile: supplierForm.mobile,
+              remark: supplierForm.remark
+            };
+
+            if (isSupplierAdd.value) {
+              await addSupplier(data);
+              showToast('新增成功');
+            } else {
+              await updateSupplier(supplierForm.id, data);
+              showToast('修改成功');
+            }
+            supplierDialogVisible.value = false;
+            loadSupplierList();
+          } catch (e) {
+            // 错误已在拦截器提示
+          } finally {
+            supplierSaving.value = false;
+          }
+        }
+
+        async function handleSupplierDelete(row) {
+          if (!showConfirm('确定删除供应商「' + row.name + '」吗？删除后不可恢复。')) return;
+          try {
+            await deleteSupplier(row.id);
+            showToast('删除成功');
+            if (supplierTable.value.length === 1 && supplierPage.current > 1) {
+              supplierPage.current--;
+            }
+            loadSupplierList();
+          } catch (e) {
+            // 错误已在拦截器提示
+          }
+        }
+
+        // ==================== 初始化 ====================
+        onMounted(() => {
+          loadMemberList();
+        });
+
+        watch(currentMenu, (val) => {
+          if (val === 'member') loadMemberList();
+          else if (val === 'goods') loadGoodsList();
+          else if (val === 'staff') loadStaffList();
+          else if (val === 'supplier') loadSupplierList();
+        });
+
+        // ==================== 导出 ====================
+        return {
+          // 用户
+          user,
+          // 导航
+          currentMenu, menuTitle, switchMenu,
+          // 工具
+          formatDate, payTypeLabel, disabledFutureDate,
+          // 密码
+          pwdDialogVisible, pwdLoading, pwdFormRef, pwdForm, pwdRules,
+          openPwdDialog, resetPwdForm, handleChangePassword, handleLogout,
+          // 会员
+          memberSearch, memberTable, memberLoading, memberPage,
+          memberDialogVisible, memberDialogTitle, memberSaving, memberFormRef,
+          isMemberAdd, memberForm, memberRules,
+          loadMemberList, handleMemberSearch, handleMemberReset,
+          openMemberAdd, openMemberEdit, resetMemberForm, handleSaveMember, handleMemberDelete,
+          // 商品
+          goodsSearch, goodsTable, goodsLoading, goodsPage,
+          goodsDialogVisible, goodsDialogTitle, goodsSaving, goodsFormRef,
+          isGoodsAdd, goodsForm, supplierOptions, goodsRules,
+          loadGoodsList, loadSupplierOptions, handleGoodsSearch, handleGoodsReset,
+          openGoodsAdd, openGoodsEdit, resetGoodsForm, handleSaveGoods, handleGoodsDelete,
+          // 员工
+          staffSearch, staffTable, staffLoading, staffPage,
+          staffDialogVisible, staffDialogTitle, staffSaving, staffFormRef,
+          isStaffAdd, staffForm, staffRules,
+          loadStaffList, handleStaffSearch, handleStaffReset,
+          openStaffAdd, openStaffEdit, resetStaffForm, handleSaveStaff, handleStaffDelete,
+          // 供应商
+          supplierSearch, supplierTable, supplierLoading, supplierPage,
+          supplierDialogVisible, supplierDialogTitle, supplierSaving, supplierFormRef,
+          isSupplierAdd, supplierForm, supplierRules,
+          loadSupplierList, handleSupplierSearch, handleSupplierReset,
+          openSupplierAdd, openSupplierEdit, resetSupplierForm, handleSaveSupplier, handleSupplierDelete
+        };
+      }
+    });
+
+    app.use(ElementPlus);
+    app.mount('#app');
+  </script>
+</body>
+</html>

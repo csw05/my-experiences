@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIP会员管理系统</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    overflow: hidden;
+  }
+
+  /* 背景装饰 */
+  .bg-shapes { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .shape {
+    position: absolute; border-radius: 50%;
+    background: rgba(64,158,255,0.08);
+    animation: float 20s infinite ease-in-out;
+  }
+  .shape:nth-child(1) { width: 400px; height: 400px; top: -100px; left: -100px; animation-delay: 0s; }
+  .shape:nth-child(2) { width: 300px; height: 300px; bottom: -80px; right: -80px; animation-delay: -5s; background: rgba(103,194,58,0.06); }
+  .shape:nth-child(3) { width: 200px; height: 200px; top: 50%; right: 20%; animation-delay: -10s; background: rgba(230,162,60,0.06); }
+  .shape:nth-child(4) { width: 150px; height: 150px; bottom: 30%; left: 25%; animation-delay: -15s; }
+  @keyframes float {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    25% { transform: translate(30px,-30px) scale(1.05); }
+    50% { transform: translate(-20px,20px) scale(0.95); }
+    75% { transform: translate(-30px,-10px) scale(1.02); }
+  }
+
+  /* 主体 */
+  .wrapper {
+    position: relative; z-index: 1;
+    margin: auto;
+    display: flex;
+    width: 900px; max-width: 95vw; min-height: 520px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    animation: fadeUp 0.6s ease-out;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 左侧品牌区 */
+  .brand {
+    flex: 1;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 40px;
+    color: #fff;
+    position: relative; overflow: hidden;
+  }
+  .brand::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 30% 70%, rgba(64,158,255,0.15), transparent 60%),
+                radial-gradient(circle at 70% 30%, rgba(103,194,58,0.08), transparent 50%);
+  }
+  .brand-content { position: relative; z-index: 1; text-align: center; }
+  .brand .logo-icon {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #409EFF, #67C23A);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 36px;
+    box-shadow: 0 8px 32px rgba(64,158,255,0.3);
+    animation: pulse 3s infinite ease-in-out;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 8px 32px rgba(64,158,255,0.3); }
+    50% { box-shadow: 0 8px 48px rgba(64,158,255,0.5); }
+  }
+  .brand h1 { font-size: 26px; font-weight: 700; letter-spacing: 2px; margin-bottom: 8px; }
+  .brand p { font-size: 14px; opacity: 0.7; line-height: 1.6; }
+
+  /* 右侧表单区 */
+  .form-side {
+    flex: 1;
+    background: #fff;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 50px 48px;
+  }
+  .form-side h2 {
+    font-size: 22px; color: #303133;
+    margin-bottom: 6px;
+  }
+  .form-side .sub {
+    font-size: 13px; color: #909399;
+    margin-bottom: 32px;
+  }
+
+  .input-group {
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .input-group label {
+    display: block; font-size: 13px; color: #606266;
+    margin-bottom: 6px; font-weight: 500;
+  }
+  .input-group .input-wrap {
+    position: relative; display: flex; align-items: center;
+    border: 1px solid #dcdfe6; border-radius: 8px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    background: #fff;
+  }
+  .input-group .input-wrap:focus-within {
+    border-color: #409EFF;
+    box-shadow: 0 0 0 3px rgba(64,158,255,0.1);
+  }
+  .input-group .icon {
+    width: 44px; text-align: center; font-size: 18px;
+    color: #909399; flex-shrink: 0;
+  }
+  .input-group input {
+    flex: 1; height: 44px; border: none; outline: none;
+    font-size: 14px; color: #303133; background: transparent;
+    padding-right: 12px; font-family: inherit;
+  }
+  .input-group input::placeholder { color: #c0c4cc; }
+
+  .btn-login {
+    width: 100%; height: 46px;
+    background: linear-gradient(135deg, #409EFF, #66b1ff);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+    margin-top: 8px;
+  }
+  .btn-login:hover { background: linear-gradient(135deg, #3a8ee6, #409EFF); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(64,158,255,0.35); }
+  .btn-login:active { transform: translateY(0); }
+  .btn-login:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .msg {
+    margin-top: 16px; text-align: center; font-size: 13px;
+    min-height: 20px; transition: all 0.3s;
+  }
+  .msg.error { color: #f56c6c; }
+  .msg.success { color: #67c23a; }
+
+  .footer-text {
+    margin-top: 24px; text-align: center; font-size: 12px; color: #c0c4cc;
+  }
+
+  @media (max-width: 768px) {
+    .wrapper { flex-direction: column; min-height: auto; }
+    .brand { padding: 30px 24px; }
+    .brand .logo-icon { width: 56px; height: 56px; font-size: 26px; }
+    .form-side { padding: 32px 28px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-shapes">
+  <div class="shape"></div><div class="shape"></div>
+  <div class="shape"></div><div class="shape"></div>
+</div>
+
+<div class="wrapper">
+  <!-- 左侧品牌 -->
+  <div class="brand">
+    <div class="brand-content">
+      <div class="logo-icon">👑</div>
+      <h1>VIP 管理系统</h1>
+      <p>会员 · 商品 · 员工 · 供应商<br>一站式后台管理</p>
+    </div>
+  </div>
+
+  <!-- 右侧登录表单 -->
+  <div class="form-side">
+    <h2>欢迎回来</h2>
+    <p class="sub">请使用您的员工账号登录</p>
+    <form id="loginForm" onsubmit="return false">
+      <div class="input-group">
+        <label>用户名</label>
+        <div class="input-wrap">
+          <span class="icon">👤</span>
+          <input type="text" id="username" placeholder="请输入用户名" value="admin" autocomplete="off">
+        </div>
+      </div>
+      <div class="input-group">
+        <label>密码</label>
+        <div class="input-wrap">
+          <span class="icon">🔒</span>
+          <input type="password" id="password" placeholder="请输入密码" value="123456" autocomplete="off">
+        </div>
+      </div>
+      <button type="submit" class="btn-login" id="loginBtn">登 录</button>
+      <div class="msg" id="msg"></div>
+    </form>
+    <p class="footer-text">默认账号 admin / 123456</p>
+  </div>
+</div>
+
+<script>
+  var BASE = window.location.origin;
+  var $btn = document.getElementById('loginBtn');
+  var $msg = document.getElementById('msg');
+
+  function showMsg(text, type) {
+    $msg.textContent = text;
+    $msg.className = 'msg ' + (type || '');
+  }
+
+  async function doLogin(username, password) {
+    // Step 1: find user
+    var r1 = await fetch(BASE + '/staff/list/search/1/1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username })
+    });
+    var b1 = await r1.json();
+    if (b1.code !== 2000 || !b1.data || !b1.data.records || !b1.data.records.length) {
+      throw new Error('\u7528\u6237\u4e0d\u5b58\u5728');
+    }
+    var staff = b1.data.records[0];
+
+    // Step 2: verify password
+    var r2 = await fetch(BASE + '/user/pwd', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: staff.id, password: password })
+    });
+    var b2 = await r2.json();
+    if (b2.code !== 2000) {
+      throw new Error(b2.message || '\u5bc6\u7801\u9519\u8bef');
+    }
+    return { userId: staff.id, username: staff.username, name: staff.name };
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var u = document.getElementById('username').value.trim();
+    var p = document.getElementById('password').value;
+    if (!u || !p) { showMsg('\u8bf7\u8f93\u5165\u7528\u6237\u540d\u548c\u5bc6\u7801', 'error'); return; }
+    $btn.disabled = true;
+    $btn.textContent = '\u767b\u5f55\u4e2d...';
+    showMsg('');
+    try {
+      var user = await doLogin(u, p);
+      localStorage.setItem('vip_user', JSON.stringify(user));
+      showMsg('\u767b\u5f55\u6210\u529f\uff0c\u6b63\u5728\u8df3\u8f6c...', 'success');
+      setTimeout(function() { window.location.href = 'main.html?_v=2'; }, 500);
+    } catch (err) {
+      showMsg(err.message || '\u767b\u5f55\u5931\u8d25', 'error');
+      $btn.disabled = false;
+      $btn.textContent = '\u767b \u5f55';
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.westos.mapper.GoodsMapper">
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="org.westos.entity.Goods">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="code" property="code"/>
+        <result column="spec" property="spec"/>
+        <result column="retail_price" property="retailPrice"/>
+        <result column="purchase_price" property="purchasePrice"/>
+        <result column="storage_num" property="storageNum"/>
+        <result column="supplier_id" property="supplierId"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id
+        , name, code, spec, retail_price, purchase_price, storage_num, supplier_id
+    </sql>
+
+    <select id="searchPage" resultType="org.westos.entity.Goods">
+        SELECT t1.*,
+        t2.name AS supplierName
+        FROM tb_goods t1
+        LEFT JOIN tb_supplier t2 ON t1.supplier_id = t2.id
+        WHERE 1 = 1
+        <if test="req.name != null and req.name != ''">
+            AND t1.name LIKE CONCAT('%', #{req.name}, '%')
+        </if>
+        <if test="req.code != null and req.code != ''">
+            AND t1.code LIKE CONCAT('%', #{req.code}, '%')
+        </if>
+        <if test="req.supplierId != null">
+            AND t1.supplier_id = #{req.supplierId}
+        </if>
+    </select>
+</mapper>
