@@ -1,14 +1,38 @@
-# Build output
-target/
-*.class
-*.jar
-*.war
-
 # IDE
 .idea/
 *.iml
 .vscode/
 
+# Build output
+target/
+out/
+dist/
+build/
+.classpath
+.project
+.settings/
+
+# Dependencies
+node_modules/
+package-lock.json
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Java
+*.class
+*.jar
+*.war
+!mvnw
+
+# Logs
+*.log
+
+# Maven wrapper jar (optional - include or exclude)
+# .mvn/wrapper/maven-wrapper.jar
+
+# Temp files
+*.tmp
+*.swp
+*~
