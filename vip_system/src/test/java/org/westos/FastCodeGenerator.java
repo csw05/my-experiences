@@ -15,7 +15,7 @@ public class FastCodeGenerator {
     // 数据库用户名
     public static final String USERNAME = "root";
     // 数据库连接密码，使用你的数据密码
-    public static final String PASSWORD = "123456";
+    public static final String PASSWORD = "your_password";
 
     // 生成指定表代码,参数传递表名
     public static void model(String tableName) {
