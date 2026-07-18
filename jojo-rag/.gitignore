@@ -1,0 +1,24 @@
+# 环境变量（包含 API Key，切勿上传）
+.env
+
+# 向量索引缓存（首次运行时自动生成）
+vector_index/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# 虚拟环境
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
