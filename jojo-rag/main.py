@@ -19,6 +19,8 @@ if sys.platform == 'win32':
 sys.path.append(str(Path(__file__).parent))
 
 from dotenv import load_dotenv
+load_dotenv()  # 必须在导入 rag_modules 之前，确保 HF_ENDPOINT 已设置
+
 from config import DEFAULT_CONFIG, RAGConfig
 from rag_modules import (
     DataPreparationModule,
@@ -26,9 +28,6 @@ from rag_modules import (
     RetrievalOptimizationModule,
     GenerationIntegrationModule,
 )
-
-# 加载环境变量
-load_dotenv()
 
 # 配置日志 — WARNING 级别，抑制模块级 INFO 噪音
 logging.basicConfig(

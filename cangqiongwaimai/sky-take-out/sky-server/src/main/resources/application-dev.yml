@@ -4,8 +4,8 @@ sky:
     host: localhost
     port: 3306
     database: sky_take_out
-    username: your_username
-    password: your_password
+    username: root
+    password: root
   alioss:
     endpoint: oss-cn-hangzhou.aliyuncs.com
     access-key-id: YOUR_OSS_KEY_ID
