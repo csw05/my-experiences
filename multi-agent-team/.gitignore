@@ -9,6 +9,9 @@ __pycache__/
 dist/
 build/
 
+# 代码执行器生成的项目文件
+coding/
+
 # IDE
 .vscode/
 .idea/

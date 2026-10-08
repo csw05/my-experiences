@@ -1,4 +1,32 @@
-# My Experience — 项目集合
+# My Experience — 个人项目集合
+
+> AI 应用（RAG 检索增强 / 多智能体协作 / LLM 应用）＋ Java 全栈（Spring Boot + Vue）两条主线的个人项目集合，共 5 个项目，每个都可独立运行。
+
+本仓库收录我在课余时间独立完成的 5 个项目，目的是完整走一遍 **需求 → 设计 → 实现 → 调试 → 文档** 的工程流程，而不是"跑通一个 demo"。每个项目都配有清晰的运行步骤、运行截图与常见问题整理，尽量做到 clone 下来就能跑起来。
+
+## 项目速览
+
+| # | 项目 | 方向 | 核心技术 | 亮点 |
+|---|------|------|---------|------|
+| 1 | AI Partner — 花菜聊天伴侣 | LLM 应用 | Python · Streamlit · DeepSeek | 5 种 AI 人格、24 款头像、多模型切换、流式输出 |
+| 2 | 多智能体软件开发团队 | AI Agent | Python · Microsoft AutoGen · Streamlit | 6 个 Agent 走完整软件流程，生成代码真实落盘并运行 |
+| 3 | JoJolands RAG | RAG | LangChain · FAISS · BGE · BM25 | 176 个 JOJO 角色，混合检索 + 对比实验 |
+| 4 | 苍穹外卖 Sky Take-Out | Java 后端 | Spring Boot · Redis · WebSocket · 小程序 | O2O 外卖平台，用户端 + 商家端后端 |
+| 5 | VIP 会员管理系统 | Java 全栈 | Spring Boot 3.4 · Vue 3 · Element Plus | 纯手写全栈后台，4 大业务模块 |
+
+## 能力体现
+
+这 5 个项目有意覆盖两条主线，集中体现以下能力：
+
+- **LLM 应用工程**（AI Partner / 多智能体团队）：Prompt 设计、流式输出、多轮记忆、多模型适配、会话持久化与导出
+- **RAG 全链路**（JoJolands RAG）：文档加载 → 递归分块 → BGE 向量化 → FAISS 索引 → BM25 + 向量混合检索 → LLM 生成，并做了检索方案对比实验
+- **多智能体（Agent）架构**（多智能体团队）：角色分工、编排顺序、终止条件与轮次控制；为 Agent 接入**代码执行器**，赋予其"工具调用 + 本地文件写入"能力
+- **Prompt Engineering**：角色提示（Role Prompting）、结构化输出约束、工具调用（Function Calling）思路，能针对不同场景设计提示策略
+- **Java 后端工程**（苍穹外卖 / VIP 系统）：Spring Boot 分层开发、MyBatis-Plus、JWT 鉴权、Redis 缓存、WebSocket 实时推送、阿里云 OSS 对象存储
+- **前端与全栈**（VIP 系统）：Vue 3 + Element Plus 构建 SPA、Axios 统一拦截器、静态资源本地化，独立完成后端接口与前后端联调
+- **工程规范与文档**：Git 提交规范、逐项目 README、统一的运行步骤与常见问题整理，遇到环境/依赖问题能自行定位并沉淀为文档
+
+---
 
 ## 环境准备（所有项目通用）
 
@@ -66,16 +94,25 @@ streamlit run main.py
 # 浏览器自动打开 http://localhost:8501
 ```
 
+<details>
+<summary>📸 运行截图</summary>
+
+![花菜](AI-partner/screen-shot/花菜.png)
+
+</details>
+
 ---
 
-## 2. Multi-Agent Code Review
+## 2. 多智能体软件开发团队
 
 **打开方式**：用 VS Code 或 PyCharm 打开 `multi-agent-team/` 目录。
 
 ```
 Python · Microsoft AutoGen · Streamlit · DeepSeek API
-5 个 AI Agent 协作代码审查 / CLI + Web 双入口
+6 个 AI Agent + 代码执行器 / 单步人工审核 / 代码真实落盘运行
 ```
+
+> 与"只输出文本"的对话式 AI 不同：这里的 Agent 能把生成的项目代码**真正写入本地磁盘并运行**，再把运行结果回传给测试环节——具备"工具调用 + 本地文件写入"能力，而不只是给出一段文本建议。
 
 ### 运行步骤
 
@@ -93,15 +130,33 @@ pip install -r requirements.txt
 
 # 4. 配置 API Key
 copy .env.example .env
-# 编辑 .env，填入 DEEPSEEK_API_KEY
+# 编辑 .env，填入 LLM_API_KEY（默认 DeepSeek，可换成任意 OpenAI 兼容模型）
 
-# 5a. CLI 模式（终端运行）
-python main.py
-
-# 5b. Web 模式（Streamlit 界面）
-streamlit run app.py
+# 5. 启动（Streamlit 交互页面）
+streamlit run main.py
 # 浏览器打开 http://localhost:8501
+# 若 streamlit 命令不可用，改用：python -m streamlit run main.py
 ```
+
+### 使用说明
+
+1. 输入需求描述，点「开始开发」。
+2. 系统按角色**逐步执行**：需求分析 → 系统设计 → UI/UX 设计 → 编码实现（含真实执行）→ 测试与质量 → 汇总报告。
+3. 每个环节产出后**暂停**：可「通过」进入下一步，或「提交反馈」让当前角色重新生成。
+4. 到「编码实现」阶段，生成的项目代码会写入 `coding/` 目录并自动运行、自动启动网页预览。
+5. 全部通过后生成结构化的「软件开发过程报告」，可下载 Markdown。
+
+<details>
+<summary>📸 运行截图</summary>
+
+![需求分析](multi-agent-team/screen-shot/需求分析.png)
+![系统设计](multi-agent-team/screen-shot/系统设计.png)
+![UI 设计](multi-agent-team/screen-shot/UI设计.png)
+![代码实现](multi-agent-team/screen-shot/代码实现.png)
+![测试与质量审查](multi-agent-team/screen-shot/测试与质量审查.png)
+![报告生成](multi-agent-team/screen-shot/报告生成.png)
+
+</details>
 
 ---
 
@@ -155,6 +210,14 @@ python main.py
 知识库位于 `data/pdf/`，包含 176 份 TXT 文件，覆盖 JOJO 1-9 部所有出现且提到过名字的角色。
 
 > 如需扩展数据：在灰机 wiki 角色分类页（https://jojo.huijiwiki.com/wiki/分类:角色）的浏览器控制台（F12）运行 `scraper.html` 中的 JS 脚本，抓取完成后将 txt 文件放入 `data/pdf/` 并重新运行 `python main.py`。
+
+<details>
+<summary>📸 运行截图</summary>
+
+![jojo-rag](jojo-rag/screen-shot/jojo-rag.png)
+![answer](jojo-rag/screen-shot/answer.png)
+
+</details>
 
 ---
 
@@ -227,6 +290,15 @@ mvn spring-boot:run
 |------|------|------|
 | 管理端 | admin | 123456 |
 
+<details>
+<summary>📸 运行截图</summary>
+
+![菜品管理](cangqiongwaimai/screen-shot/cangqiongwaimai-菜品管理.png)
+![订单管理](cangqiongwaimai/screen-shot/cangqiongwaimai-订单管理.png)
+![数据统计](cangqiongwaimai/screen-shot/cangqiongwaimai-数据统计.png)
+
+</details>
+
 ---
 
 ## 5. VIP 会员管理系统
@@ -289,6 +361,14 @@ mvn spring-boot:run
 | 商品管理 | 商品信息维护、类别筛选 |
 | 员工管理 | 员工档案、职位信息 |
 | 供应商管理 | 供应商信息、供货关系 |
+
+<details>
+<summary>📸 运行截图</summary>
+
+![会员管理系统首页](vip_system/screen-shot/会员管理系统首页.png)
+![会员管理系统功能页面](vip_system/screen-shot/会员管理系统功能页面.png)
+
+</details>
 
 ---
 
